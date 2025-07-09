@@ -1,0 +1,6 @@
+PyMuPDF
+streamlit
+pip install google-generativeai python-dotenv
+google-generativeai
+python-dotenv
+duckduckgo-search

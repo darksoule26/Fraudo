@@ -34,3 +34,6 @@ Coming soon...
 ## 🛡 License
 
 MIT
+
+
+streamlit run app.py
