@@ -1,63 +1,53 @@
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
-import json
-import re
 
-# Load .env file
 load_dotenv()
 
-# Configure Gemini API
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+def analyze_text_gemini(job_text):
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-def extract_json(text):
-    """Extract JSON object from AI response using regex"""
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group())
-        except json.JSONDecodeError:
-            return None
-    return None
+    model = genai.GenerativeModel("models/gemini-1.5-flash-latest")  # ⬅️ Using flash model
 
-def analyze_text(job_text):
     prompt = f"""
-You are an AI that analyzes job messages to detect potential job scams.
 
-Return a JSON object ONLY in this format:
+You are a professional AI assistant that helps people verify job and internship offers to detect potential frauds or scams.
 
-{{
-  "classification": "Legit | Suspicious | Scam",
-  "risk_score": int (0 to 100),
-  "company_name": "Name of the company or None",
-  "red_flags": [list of problems],
-  "suggestion": "Advice to the user"
-}}
+Analyze the following message or offer letter in depth. Provide a comprehensive report with the following structure:
 
-DO NOT include any explanation or extra text.
+1. Introduction
+   - Briefly summarize what the message is about and what type of communication it is (e.g., internship offer, recruitment email, onboarding instructions).
 
-Job Message:
+2. Detailed Observations
+   - List as many red flags or concerns as possible.
+   - For each red flag, give a full explanation. Cover things like tone, language, urgency, contact method (WhatsApp), grammar, use of official-looking language, lack of company details, etc.
+   - Be professional and precise. Avoid fear-mongering.
+
+3. Missing Information
+   - Clearly mention what important info is missing (e.g., compensation, official email, company address, proper signature, etc.)
+   - Say why these are important.
+
+4. Legitimacy Evaluation
+   - Based on the message alone (not external search), assess whether it sounds like a legitimate offer or something that needs verification.
+
+5. Web Verification
+   - Search for the company name or key details online.
+   - Provide a summary of the search results, including:
+     - Top links found (if any).
+     - Any trustworthiness indicators (e.g., official website, social media presence).
+     - Mention if the company has a verified website or not.
+
+6. Final Recommendation
+   - One clear, human-friendly paragraph on what the user should do next.
+   - Include advice on what to verify (e.g., company site, LinkedIn, email domain).
+   - Assume the user is a student or fresher who might not know these things.
+
+Here is the message to analyze:
+
 \"\"\"
 {job_text}
 \"\"\"
 """
 
-    try:
-        model = genai.GenerativeModel(model_name="models/gemini-1.5-flash-latest")
-        response = model.generate_content(prompt)
-
-        data = extract_json(response.text)
-
-        if data is None:
-            raise ValueError("Could not extract JSON from AI response.")
-
-        return data
-
-    except Exception as e:
-        return {
-            "classification": "Unknown",
-            "risk_score": 50,
-            "company_name": "None",
-            "red_flags": [f"Error: {str(e)}"],
-            "suggestion": "Try again or check your input."
-        }
+    response = model.generate_content(prompt)
+    return response.text
