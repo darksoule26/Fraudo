@@ -9,8 +9,7 @@ from bs4 import BeautifulSoup
 # --- DOMAIN UTILS ---
 def get_domain_from_url(url):
     parsed = urlparse(url)
-    domain = parsed.netloc.replace("www.", "")
-    return domain
+    return parsed.netloc.replace("www.", "")
 
 # --- SMART SEARCH ---
 def search_company_info(company_name):
@@ -54,7 +53,7 @@ def domain_match_check(company_links, offer_text):
 
     return False, f"⚠️ Email domain `{detected_offer_domain}` does NOT match any official site."
 
-# --- DOMAIN AGE CHECK ---
+# --- DOMAIN AGE CHECK (Streamlit-safe) ---
 def check_domain_age(company_links):
     if not company_links:
         return False, "⚠️ No links found to verify domain age."
@@ -63,16 +62,33 @@ def check_domain_age(company_links):
     try:
         info = whois.whois(domain)
         creation_date = info.creation_date
+        expiration_date = info.expiration_date
+        registrar = info.registrar or "Unknown"
+        country = info.country or "Unknown"
+        status = info.status[0] if isinstance(info.status, list) else info.status or "Unknown"
+
         if isinstance(creation_date, list):
             creation_date = creation_date[0]
+        if isinstance(expiration_date, list):
+            expiration_date = expiration_date[0]
+
         if not creation_date:
             raise ValueError("No creation date available.")
 
         age_days = (datetime.now() - creation_date).days
+
+        meta_info = f"""
+📅 Created: `{creation_date.strftime('%Y-%m-%d')}`  
+📆 Expires: `{expiration_date.strftime('%Y-%m-%d') if expiration_date else 'Unknown'}`  
+🔖 Registrar: `{registrar}`  
+🌐 Country: `{country}`  
+📌 Status: `{status}`
+"""
+
         if age_days < 180:
-            return False, f"⚠️ Domain `{domain}` is too new ({age_days} days old) – be cautious."
+            return False, f"⚠️ Domain `{domain}` is too new ({age_days} days old) – be cautious.\n\n{meta_info}"
         else:
-            return True, f"✅ Domain `{domain}` is {age_days} days old – trustworthy."
+            return True, f"✅ Domain `{domain}` is {age_days} days old – trustworthy.\n\n{meta_info}"
 
     except Exception as e:
         return False, f"❌ WHOIS check failed: {str(e)}"
